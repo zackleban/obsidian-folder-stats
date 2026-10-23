@@ -1,0 +1,9 @@
+{
+	"id": "folder-stats",
+	"name": "Folder Stats",
+	"version": "1.0.0",
+	"minAppVersion": "1.6.0",
+	"description": "Hover a folder in the file explorer to see how many folders and files are inside it, and inside all its subfolders.",
+	"author": "Zack",
+	"isDesktopOnly": true
+}
