@@ -26,11 +26,8 @@ module.exports = __toCommonJS(main_exports);
 var import_obsidian = require("obsidian");
 var FOLDER_ROW = ".nav-files-container .nav-folder-title";
 var TIP_CLASS = "folder-stats-tip";
-var OFFSET_X = 16;
+var OFFSET_X = 18;
 var OFFSET_Y = 12;
-var isNote = (file) => file instanceof import_obsidian.TFile && file.extension === "md";
-var plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
-var line = (c) => `${plural(c.folders, "folder", "folders")} \xB7 ${plural(c.files, "file", "files")}`;
 var FolderStatsPlugin = class extends import_obsidian.Plugin {
   constructor() {
     super(...arguments);
@@ -72,20 +69,12 @@ var FolderStatsPlugin = class extends import_obsidian.Plugin {
   }
   show(row, folder) {
     this.hide();
-    const direct = { folders: 0, files: 0, notes: 0 };
-    for (const child of folder.children) {
-      if (child instanceof import_obsidian.TFolder) direct.folders++;
-      else {
-        direct.files++;
-        if (isNote(child)) direct.notes++;
-      }
-    }
     const all = this.totals(folder);
     const tip = document.body.createDiv({ cls: TIP_CLASS });
-    tip.createDiv({ cls: "folder-stats-direct", text: line(direct) });
+    tip.createDiv({ cls: "folder-stats-totals", text: `Total folders: ${all.folders} \xB7 Total files: ${all.files}` });
     tip.createDiv({
-      cls: "folder-stats-all",
-      text: `all levels: ${line(all)}, ${plural(all.notes, "note", "notes")}`
+      cls: "folder-stats-depth",
+      text: `Folders until file: ${all.depth < 0 ? "no files" : all.depth}`
     });
     this.tip = tip;
     this.row = row;
@@ -93,19 +82,19 @@ var FolderStatsPlugin = class extends import_obsidian.Plugin {
   totals(folder) {
     const cached = this.cache.get(folder.path);
     if (cached) return cached;
-    const sum = { folders: 0, files: 0, notes: 0 };
-    const walk = (dir) => {
+    const sum = { folders: 0, files: 0, depth: -1 };
+    const walk = (dir, level) => {
       for (const child of dir.children) {
         if (child instanceof import_obsidian.TFolder) {
           sum.folders++;
-          walk(child);
+          walk(child, level + 1);
         } else {
           sum.files++;
-          if (isNote(child)) sum.notes++;
+          sum.depth = Math.max(sum.depth, level);
         }
       }
     };
-    walk(folder);
+    walk(folder, 0);
     this.cache.set(folder.path, sum);
     return sum;
   }
@@ -115,7 +104,7 @@ var FolderStatsPlugin = class extends import_obsidian.Plugin {
     const width = tip.offsetWidth;
     const height = tip.offsetHeight;
     const left = x + OFFSET_X + width > window.innerWidth ? Math.max(0, x - OFFSET_X - width) : x + OFFSET_X;
-    const top = y + OFFSET_Y + height > window.innerHeight ? Math.max(0, y - OFFSET_Y - height) : y + OFFSET_Y;
+    const top = y + OFFSET_Y - height < 0 ? y + OFFSET_Y : y + OFFSET_Y - height;
     tip.style.left = `${left}px`;
     tip.style.top = `${top}px`;
   }

@@ -1,20 +1,17 @@
-import { Plugin, TAbstractFile, TFile, TFolder } from "obsidian";
+import { Plugin, TFolder } from "obsidian";
 
 const FOLDER_ROW = ".nav-files-container .nav-folder-title";
 const TIP_CLASS = "folder-stats-tip";
-// The tooltip sits this far right of and below the mouse, so it never covers the row under it.
-const OFFSET_X = 16;
+// The tooltip sits this far right of the mouse, with its bottom edge this far below it.
+const OFFSET_X = 18;
 const OFFSET_Y = 12;
 
 interface Counts {
 	folders: number;
 	files: number;
-	notes: number;
+	// Folders to go through, below this one, to reach its furthest file; -1 when it holds no files.
+	depth: number;
 }
-
-const isNote = (file: TAbstractFile): file is TFile => file instanceof TFile && file.extension === "md";
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-const line = (c: Counts) => `${plural(c.folders, "folder", "folders")} · ${plural(c.files, "file", "files")}`;
 
 export default class FolderStatsPlugin extends Plugin {
 	private tip: HTMLElement | null = null;
@@ -61,21 +58,13 @@ export default class FolderStatsPlugin extends Plugin {
 
 	private show(row: HTMLElement, folder: TFolder) {
 		this.hide();
-		const direct: Counts = { folders: 0, files: 0, notes: 0 };
-		for (const child of folder.children) {
-			if (child instanceof TFolder) direct.folders++;
-			else {
-				direct.files++;
-				if (isNote(child)) direct.notes++;
-			}
-		}
 		const all = this.totals(folder);
 
 		const tip = document.body.createDiv({ cls: TIP_CLASS });
-		tip.createDiv({ cls: "folder-stats-direct", text: line(direct) });
+		tip.createDiv({ cls: "folder-stats-totals", text: `Total folders: ${all.folders} · Total files: ${all.files}` });
 		tip.createDiv({
-			cls: "folder-stats-all",
-			text: `all levels: ${line(all)}, ${plural(all.notes, "note", "notes")}`,
+			cls: "folder-stats-depth",
+			text: `Folders until file: ${all.depth < 0 ? "no files" : all.depth}`,
 		});
 		this.tip = tip;
 		this.row = row;
@@ -84,19 +73,19 @@ export default class FolderStatsPlugin extends Plugin {
 	private totals(folder: TFolder): Counts {
 		const cached = this.cache.get(folder.path);
 		if (cached) return cached;
-		const sum: Counts = { folders: 0, files: 0, notes: 0 };
-		const walk = (dir: TFolder) => {
+		const sum: Counts = { folders: 0, files: 0, depth: -1 };
+		const walk = (dir: TFolder, level: number) => {
 			for (const child of dir.children) {
 				if (child instanceof TFolder) {
 					sum.folders++;
-					walk(child);
+					walk(child, level + 1);
 				} else {
 					sum.files++;
-					if (isNote(child)) sum.notes++;
+					sum.depth = Math.max(sum.depth, level);
 				}
 			}
 		};
-		walk(folder);
+		walk(folder, 0);
 		this.cache.set(folder.path, sum);
 		return sum;
 	}
@@ -106,9 +95,10 @@ export default class FolderStatsPlugin extends Plugin {
 		if (!tip) return;
 		const width = tip.offsetWidth;
 		const height = tip.offsetHeight;
-		// Flip to the left of / above the mouse only when there is no room on the right / below.
+		// The bottom edge sits OFFSET_Y below the mouse. Flip to the left of the mouse only when there is
+		// no room on the right, and below it only when there is no room above.
 		const left = x + OFFSET_X + width > window.innerWidth ? Math.max(0, x - OFFSET_X - width) : x + OFFSET_X;
-		const top = y + OFFSET_Y + height > window.innerHeight ? Math.max(0, y - OFFSET_Y - height) : y + OFFSET_Y;
+		const top = y + OFFSET_Y - height < 0 ? y + OFFSET_Y : y + OFFSET_Y - height;
 		tip.style.left = `${left}px`;
 		tip.style.top = `${top}px`;
 	}

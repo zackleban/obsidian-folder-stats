@@ -29,6 +29,6 @@ body {
 	box-shadow: var(--shadow-s);
 }
 
-.folder-stats-all {
+.folder-stats-depth {
 	color: var(--text-muted);
 }

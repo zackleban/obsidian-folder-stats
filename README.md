@@ -1,15 +1,17 @@
 # Folder Stats
 
-Hover a folder in the file explorer and a small tooltip follows the mouse with what is inside it:
+Hover a folder in the file explorer and a small tooltip appears just above and to the right of the mouse, and follows
+it, with what is inside the folder:
 
 ```
-6 folders · 22 files
-all levels: 14 folders · 130 files, 97 notes
+Total folders: 14 · Total files: 130
+Folders until file: 3
 ```
 
-The first line is the folder's direct children. The second counts everything under it, all subfolders included. Files
-are every non-folder file (notes, images, PDFs); notes are the `.md` ones. The tooltip goes away when the mouse leaves
-the row, or when you click or start a drag. It never catches the mouse.
+The first line counts everything under the folder, all subfolders included. Files are every non-folder file (notes,
+images, PDFs). The second line is how many folders deep you have to go to reach the folder's furthest file: 0 when the
+file sits directly in the folder, "no files" when there are none. The tooltip goes away when the mouse leaves the row,
+or when you click or start a drag. It never catches the mouse.
 
 Counts come from the vault (`app.vault`), computed on hover and cached until a file or folder is created, deleted or
 renamed.
